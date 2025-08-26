@@ -1,30 +1,28 @@
-/**
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
- */ {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "llm-chat-app-template",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-04-01",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"global_fetch_strictly_public"
-	],
-	"assets": {
-		"binding": "ASSETS",
-		"directory": "./public"
-	},
-	"observability": {
-		"enabled": true
-	},
-	"ai": {
-		"binding": "AI"
-	},
-	"upload_source_maps": true,
-	"kv_namespaces": [
-		{
-			"binding": "FILES_KV",
-			"id": "de9691b7e7604c70962d2104668ae321"
-		}
-	]
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "felicity",
+  "main": "src/index.ts",
+  "account_id": "dcdadce27e8921f372e18062f341cfb4",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": { "binding": "ASSETS", "directory": "./public" },
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+
+  "kv_namespaces": [
+    { "binding": "FILES_KV", "id": "de9691b7e7604c70962d2104668ae321" }
+  ],
+
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "felicity-files" }
+  ],
+
+  "vars": {
+    "R2_ACCOUNT_ID": "dcdadce27e8921f372e18062f341cfb4",
+    "R2_BUCKET": "felicity-files"
+  },
+
+  "triggers": { "crons": ["15 3 * * *"] }
 }
