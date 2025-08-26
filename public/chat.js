@@ -26,6 +26,21 @@ let chatHistory = [
 ];
 
 
+function addMessageToUI(role, content) {
+  const wrap = document.createElement("div");
+  wrap.className = `message ${role}-message`;
+  const p = document.createElement("p");
+  p.textContent = content;
+  wrap.appendChild(p);
+  chatMessages.appendChild(wrap);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  for (const m of chatHistory) addMessageToUI(m.role, m.content);
+});
+
+
 let isProcessing = false;
 
 // Auto-resize textarea as user types
