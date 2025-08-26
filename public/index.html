@@ -151,6 +151,29 @@
         Felicity is thinking...
       </div>
 
+      <!-- File upload panel (place above the message-input) -->
+<div id="upload-panel" style="padding:0.75rem;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;background:#fff;">
+  <label style="display:block;font-weight:600;font-size:14px;margin-bottom:6px;">
+    Attach files
+  </label>
+
+  <input
+    id="file-input"
+    type="file"
+    multiple
+    accept=".txt,.md,.csv,.tsv,.json,.pdf,.docx,.pptx,.xlsx,.html,.xml,.rtf"
+    style="display:block;width:100%;"
+  />
+
+  <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:#374151;">
+    <input type="checkbox" id="pin-files" />
+    Keep forever (don’t auto-delete)
+  </label>
+
+  <div id="upload-status" style="margin-top:8px;font-size:12px;color:#6b7280;"></div>
+</div>
+
+
       <div class="message-input">
         <textarea
           id="user-input"

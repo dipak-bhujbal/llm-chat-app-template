@@ -10,6 +10,74 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
+// === File upload DOM ===
+const fileInput = document.getElementById("file-input");
+const pinCheckbox = document.getElementById("pin-files");
+const uploadStatus = document.getElementById("upload-status");
+
+// helper to format GB
+function fmtGB(bytes) {
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+}
+
+async function checkQuota() {
+  const r = await fetch("/api/quota");
+  if (!r.ok) throw new Error("quota endpoint failed");
+  return r.json();
+}
+
+async function uploadSelectedFiles() {
+  const files = fileInput?.files;
+  if (!files || files.length === 0) return;
+
+  if (files.length > 20) {
+    if (uploadStatus) uploadStatus.textContent = "⚠️ You can upload at most 20 files at once.";
+    return;
+  }
+
+  // Check quota
+  let quota;
+  try {
+    quota = await checkQuota();
+  } catch (err) {
+    if (uploadStatus) uploadStatus.textContent = "❌ Couldn’t check storage quota.";
+    return;
+  }
+
+  if (!quota.okToUpload) {
+    if (uploadStatus) {
+      uploadStatus.textContent =
+        (quota.message ||
+          "Storage nearly full. Please delete some files before uploading.") +
+        ` [${fmtGB(quota.usedBytes)} / ${fmtGB(quota.limitBytes)}]`;
+    }
+    return;
+  }
+
+  const form = new FormData();
+  Array.from(files).forEach((f) => form.append("files", f));
+  form.append("pin", String(pinCheckbox?.checked ?? false));
+
+  if (uploadStatus) uploadStatus.textContent = "Uploading…";
+  try {
+    const r = await fetch("/api/upload", { method: "POST", body: form });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) {
+      if (uploadStatus) {
+        uploadStatus.textContent =
+          j.message || "❌ Upload failed. Check file types and try again.";
+      }
+      return;
+    }
+    if (uploadStatus) uploadStatus.textContent = `✅ Uploaded ${j.files.length} file(s).`;
+    if (fileInput) fileInput.value = ""; // clear picker
+  } catch {
+    if (uploadStatus) uploadStatus.textContent = "❌ Network error while uploading.";
+  }
+}
+
+// ---------------- Chat UI ----------------
+
 const felicityOpeners = [
   "Well, finally. I was starting to wonder when you’d show up. Don’t worry, I’ve already anticipated half of what you’re about to ask. Go on — surprise me.",
   "I’ve been running your day in my head already. Care to tell me if I got it right, or should I just handle it for you?",
@@ -25,7 +93,6 @@ let chatHistory = [
   },
 ];
 
-
 function addMessageToUI(role, content) {
   const wrap = document.createElement("div");
   wrap.className = `message ${role}-message`;
@@ -39,7 +106,6 @@ function addMessageToUI(role, content) {
 window.addEventListener("DOMContentLoaded", () => {
   for (const m of chatHistory) addMessageToUI(m.role, m.content);
 });
-
 
 let isProcessing = false;
 
@@ -120,10 +186,7 @@ async function sendMessage() {
 
     while (true) {
       const { done, value } = await reader.read();
-
-      if (done) {
-        break;
-      }
+      if (done) break;
 
       // Decode chunk
       const chunk = decoder.decode(value, { stream: true });
@@ -178,4 +241,9 @@ function addMessageToChat(role, content) {
 
   // Scroll to bottom
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// === File upload: auto-upload after selection (add this at the end) ===
+if (fileInput) {
+  fileInput.addEventListener("change", uploadSelectedFiles);
 }
