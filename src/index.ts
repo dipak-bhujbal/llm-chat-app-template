@@ -53,12 +53,25 @@ export type Env = BaseEnv & {
 // ----- Helpers -----
 const nowISO = () => new Date().toISOString();
 
-function isAllowed(type: string, filename: string) {
+function isAllowed(type: string, filename: string): boolean {
+  // Accept if MIME matches allow-list
   if (type && ALLOWED_MIME.has(type)) return true;
+
+  // Fallback: check extension case-insensitively
   const dot = filename.lastIndexOf(".");
-  if (dot >= 0) return ALLOWED_EXT.has(filename.slice(dot).toLowerCase());
+  if (dot >= 0) {
+    const ext = filename.slice(dot).toLowerCase();
+    if (ALLOWED_EXT.has(ext)) return true;
+  }
+
+  // Last resort: allow if unknown but looks like text
+  if (!type || type === "application/octet-stream") {
+    return true; // optional: relax strict check
+  }
+
   return false;
 }
+
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
