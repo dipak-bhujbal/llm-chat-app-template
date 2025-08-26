@@ -1,7 +1,5 @@
 /**
- * LLM Chat App Frontend
- *
- * Handles the chat UI interactions and communication with the backend API.
+ * LLM Chat App Frontend — with presigned R2 uploads
  */
 
 // DOM elements
@@ -15,15 +13,9 @@ const fileInput = document.getElementById("file-input");
 const pinCheckbox = document.getElementById("pin-files");
 const uploadStatus = document.getElementById("upload-status");
 
-// helper to format GB
+// Helpers
 function fmtGB(bytes) {
   return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
-}
-
-async function checkQuota() {
-  const r = await fetch("/api/quota");
-  if (!r.ok) throw new Error("quota endpoint failed");
-  return r.json();
 }
 
 async function uploadSelectedFiles() {
@@ -35,48 +27,76 @@ async function uploadSelectedFiles() {
     return;
   }
 
-  // Check quota
-  let quota;
+  // Step 1: ask the Worker for presigned URLs (also runs type/quota checks)
+  const meta = Array.from(files).map((f) => ({ name: f.name, size: f.size, type: f.type }));
+  if (uploadStatus) uploadStatus.textContent = "Checking storage & preparing uploads…";
+
+  let presign;
   try {
-    quota = await checkQuota();
-  } catch (err) {
-    if (uploadStatus) uploadStatus.textContent = "❌ Couldn’t check storage quota.";
-    return;
-  }
-
-  if (!quota.okToUpload) {
-    if (uploadStatus) {
-      uploadStatus.textContent =
-        (quota.message ||
-          "Storage nearly full. Please delete some files before uploading.") +
-        ` [${fmtGB(quota.usedBytes)} / ${fmtGB(quota.limitBytes)}]`;
-    }
-    return;
-  }
-
-  const form = new FormData();
-  Array.from(files).forEach((f) => form.append("files", f));
-  form.append("pin", String(pinCheckbox?.checked ?? false));
-
-  if (uploadStatus) uploadStatus.textContent = "Uploading…";
-  try {
-    const r = await fetch("/api/upload", { method: "POST", body: form });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) {
-      if (uploadStatus) {
+    const r = await fetch("/api/upload-urls", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ files: meta, pin: Boolean(pinCheckbox?.checked) }),
+    });
+    presign = await r.json();
+    if (!r.ok || !presign.ok) {
+      if (uploadStatus)
         uploadStatus.textContent =
-          j.message || "❌ Upload failed. Check file types and try again.";
-      }
+          presign.message ||
+          "❌ Couldn’t prepare uploads (types/quota). Try removing some files or clearing space.";
       return;
     }
-    if (uploadStatus) uploadStatus.textContent = `✅ Uploaded ${j.files.length} file(s).`;
-    if (fileInput) fileInput.value = ""; // clear picker
   } catch {
-    if (uploadStatus) uploadStatus.textContent = "❌ Network error while uploading.";
+    if (uploadStatus) uploadStatus.textContent = "❌ Network error while preparing uploads.";
+    return;
   }
+
+  // Step 2: PUT each file directly to R2 using the presigned URL
+  const uploads = presign.uploads || [];
+  if (uploads.length !== files.length) {
+    if (uploadStatus) uploadStatus.textContent = "❌ Upload mismatch. Please try again.";
+    return;
+  }
+
+  if (uploadStatus) uploadStatus.textContent = `Uploading ${uploads.length} file(s)…`;
+  const results = await Promise.allSettled(
+    uploads.map((u, i) =>
+      fetch(u.url, {
+        method: "PUT",
+        body: files[i],
+        // do not set content-type header explicitly (URL is signed for UNSIGNED-PAYLOAD)
+      }),
+    ),
+  );
+
+  const failed = results.filter((r) => r.status === "rejected" || (r.value && !r.value.ok));
+  if (failed.length) {
+    if (uploadStatus)
+      uploadStatus.textContent = `❌ ${failed.length} file(s) failed to upload. Please retry.`;
+    return;
+  }
+
+  // Step 3: confirm with Worker to tag metadata + bump counters
+  const keys = uploads.map((u) => u.key);
+  try {
+    const r = await fetch("/api/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ keys, pin: Boolean(pinCheckbox?.checked) }),
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error("confirm failed");
+  } catch {
+    if (uploadStatus)
+      uploadStatus.textContent = "⚠️ Uploaded, but confirmation failed. Try refreshing.";
+    return;
+  }
+
+  if (uploadStatus) uploadStatus.textContent = `✅ Uploaded ${uploads.length} file(s) successfully.`;
+  if (fileInput) fileInput.value = ""; // reset picker
 }
 
-// ---------------- Chat UI ----------------
+// --------------- Chat UI ---------------
 
 const felicityOpeners = [
   "Well, finally. I was starting to wonder when you’d show up. Don’t worry, I’ve already anticipated half of what you’re about to ask. Go on — surprise me.",
@@ -243,7 +263,7 @@ function addMessageToChat(role, content) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// === File upload: auto-upload after selection (add this at the end) ===
+// === File upload: auto-upload after selection ===
 if (fileInput) {
   fileInput.addEventListener("change", uploadSelectedFiles);
 }
