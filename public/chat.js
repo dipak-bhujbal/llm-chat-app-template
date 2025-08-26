@@ -15,9 +15,10 @@ let chatHistory = [
   {
     role: "assistant",
     content:
-      "Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
+      "Well, finally. I was starting to wonder when you’d show up. Don’t worry, I’ve already anticipated half of what you’re about to ask. Go on — surprise me.",
   },
 ];
+
 let isProcessing = false;
 
 // Auto-resize textarea as user types
