@@ -11,5 +11,10 @@ bucket_name = "felicity-files"
 binding = "FILES_KV"
 id = "de9691b7e7604c70962d2104668ae321"           # run: wrangler kv namespace create FILES_KV
 
+[vars]
+R2_ACCOUNT_ID = "dcdadce27e8921f372e18062f341cfb4"
+R2_BUCKET = "felicity-files"
+
 [triggers]
 crons = ["15 3 * * *"]             # daily cleanup of old files
+
