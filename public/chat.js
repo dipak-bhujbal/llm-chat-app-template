@@ -10,14 +10,21 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
-// Chat state
+const felicityOpeners = [
+  "Well, finally. I was starting to wonder when you’d show up. Don’t worry, I’ve already anticipated half of what you’re about to ask. Go on — surprise me.",
+  "I’ve been running your day in my head already. Care to tell me if I got it right, or should I just handle it for you?",
+  "You know I’m three steps ahead, right? But fine — let’s pretend I don’t already know what you need. What’s first?",
+  "Let’s cut to it. You’ve got a lot to do, and I’m the one who makes sure you don’t miss a beat. What’s top of the list?",
+  "Of course I’m here. I’m always here. The real question is: are you ready to keep up?",
+];
+
 let chatHistory = [
   {
     role: "assistant",
-    content:
-      "Well, finally. I was starting to wonder when you’d show up. Don’t worry, I’ve already anticipated half of what you’re about to ask. Go on — surprise me.",
+    content: felicityOpeners[Math.floor(Math.random() * felicityOpeners.length)],
   },
 ];
+
 
 let isProcessing = false;
 
