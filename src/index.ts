@@ -215,6 +215,20 @@ export default {
       const used = await getUsedBytes(env);
       return json({ usedBytes: used, limitBytes: BYTES_LIMIT, okToUpload: used < BYTES_LIMIT });
     }
+// --- DIAG: shows whether bindings/vars/secrets are present (not their values) ---
+if (pathname === "/api/diag" && request.method === "GET") {
+  const hasFILES = Boolean((env as any).FILES);
+  const hasKV = Boolean((env as any).FILES_KV);
+  const hasAK = Boolean((env as any).R2_ACCESS_KEY_ID);
+  const hasSK = Boolean((env as any).R2_SECRET_ACCESS_KEY);
+  const acct = (env as any).R2_ACCOUNT_ID || null;
+  const bucket = (env as any).R2_BUCKET || null;
+  return new Response(JSON.stringify(
+    { hasFILES, hasKV, hasAK, hasSK, R2_ACCOUNT_ID: acct, R2_BUCKET: bucket },
+    null,
+    2
+  ), { headers: { "content-type": "application/json" }});
+}
 
     // 1) Presign URLs (client uploads directly to R2)
     // body: { files: [{ name, size, type }], pin?: boolean }

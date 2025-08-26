@@ -6,23 +6,29 @@
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
+  // Bindings used by your app
   "assets": { "binding": "ASSETS", "directory": "./public" },
   "ai": { "binding": "AI" },
+
   "observability": { "enabled": true },
   "upload_source_maps": true,
 
+  // KV (for quota counter)
   "kv_namespaces": [
     { "binding": "FILES_KV", "id": "de9691b7e7604c70962d2104668ae321" }
   ],
 
+  // R2 (your file bucket)
   "r2_buckets": [
     { "binding": "FILES", "bucket_name": "felicity-files" }
   ],
 
+  // Vars the Worker reads for presigning
   "vars": {
     "R2_ACCOUNT_ID": "dcdadce27e8921f372e18062f341cfb4",
     "R2_BUCKET": "felicity-files"
   },
 
+  // Daily cleanup (unpinned files not accessed in 7 days)
   "triggers": { "crons": ["15 3 * * *"] }
 }
