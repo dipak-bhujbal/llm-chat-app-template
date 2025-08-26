@@ -12,6 +12,9 @@ export interface Env {
    * Binding for static assets.
    */
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+
+   FILES: R2Bucket;       // <— add this
+  FILES_KV: KVNamespace; // <— and this
 }
 
 /**
